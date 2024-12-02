@@ -15,7 +15,7 @@ const getSecret = async (secretName) => {
 
 export const handler = async (event) => {
   try {
-    const sendGridApiKey = await getSecret('sendgrid-api-key-secret');
+    const sendGridApiKey = await getSecret('sendgrid-api-key');
     sgMail.setApiKey(sendGridApiKey);
 
     const message = JSON.parse(event.Records[0].Sns.Message);
