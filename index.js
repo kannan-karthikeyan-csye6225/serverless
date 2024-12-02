@@ -3,25 +3,27 @@ import AWS from 'aws-sdk';
 
 const secretsManager = new AWS.SecretsManager();
 
-const getSecret = async (secretName) => {
+const getSecret = async () => {
+  const secretArn = process.env.SENDGRID_SECRET_ARN;
+  if (!secretArn) {
+    throw new Error('Environment variable SENDGRID_SECRET_ARN is not set');
+  }
+
   try {
-    const data = await secretsManager.getSecretValue({ SecretId: secretName }).promise();
-    
-    // Return the plain string directly if SecretString is not JSON
+    const data = await secretsManager.getSecretValue({ SecretId: secretArn }).promise();
+
     return data.SecretString;
   } catch (error) {
-    console.error(`Failed to retrieve secret "${secretName}":`, error);
+    console.error(`Failed to retrieve secret with ARN "${secretArn}":`, error);
     throw new Error('Could not fetch the secret from Secrets Manager');
   }
 };
 
 export const handler = async (event) => {
   try {
-    // Retrieve the SendGrid API Key from Secrets Manager
-    const sendGridApiKey = await getSecret('sendgrid-api-man');
+    const sendGridApiKey = await getSecret();
     sgMail.setApiKey(sendGridApiKey);
 
-    // Parse the SNS message from the event
     const message = JSON.parse(event.Records[0].Sns.Message);
     const { email, firstName, verificationUrl } = message;
 
@@ -37,7 +39,6 @@ export const handler = async (event) => {
       `,
     };
 
-    // Send the email using SendGrid
     await sgMail.send(msg);
 
     console.log('Verification email sent successfully');
