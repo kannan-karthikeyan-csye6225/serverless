@@ -6,7 +6,9 @@ const secretsManager = new AWS.SecretsManager();
 const getSecret = async (secretName) => {
   try {
     const data = await secretsManager.getSecretValue({ SecretId: secretName }).promise();
-    return JSON.parse(data.SecretString).api_key;
+    
+    // Return the plain string directly if SecretString is not JSON
+    return data.SecretString;
   } catch (error) {
     console.error(`Failed to retrieve secret "${secretName}":`, error);
     throw new Error('Could not fetch the secret from Secrets Manager');
@@ -15,9 +17,11 @@ const getSecret = async (secretName) => {
 
 export const handler = async (event) => {
   try {
-    const sendGridApiKey = await getSecret('sendgrid-api-key');
+    // Retrieve the SendGrid API Key from Secrets Manager
+    const sendGridApiKey = await getSecret('sendgrid-api-man');
     sgMail.setApiKey(sendGridApiKey);
 
+    // Parse the SNS message from the event
     const message = JSON.parse(event.Records[0].Sns.Message);
     const { email, firstName, verificationUrl } = message;
 
@@ -33,6 +37,7 @@ export const handler = async (event) => {
       `,
     };
 
+    // Send the email using SendGrid
     await sgMail.send(msg);
 
     console.log('Verification email sent successfully');
